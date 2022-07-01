@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <stdio.h>
+#include <queue>
 
 
 using namespace std;
@@ -39,6 +40,9 @@ public:
     Matrix map;
     Row row;
     unordered_map<string, vector<Point>> nodeMap;
+    Point start;
+    Point end;
+
     MazeClass(Point p) { // Constructor with parameters
         row.resize(p.x, 0);
         map.resize(p.y, row);
@@ -52,7 +56,7 @@ public:
         }
     }
 
-    void populate(Point start, Point end, int density) {
+    void populate(Point start_xy, Point end_xy, int density) {
         srand((unsigned)time(NULL));
 
         for (int i=0; i < map.size(); i++) {
@@ -60,8 +64,10 @@ public:
                 if (rand() % 100 <= density) 
                     map[i][j] = 1;
             
-            map[start.y][start.x] = 2;
-            map[end.y][end.x] = 2;
+            map[start_xy.y][start_xy.x] = 2;
+            map[end_xy.y][end_xy.x] = 2;
+            start = start_xy;
+            end = end_xy;
         }
     }
 
@@ -90,6 +96,7 @@ public:
             }
         }
     }
+
     void showNodeMap() {
         unordered_map<string, vector<Point>> ::iterator  itr;
         for (itr = nodeMap.begin(); itr != nodeMap.end(); ++itr) {
@@ -98,6 +105,24 @@ public:
                 cout << itr->second[i].x << itr->second[i].y << " ";
             }
             cout << endl;
+        }
+    }
+
+    void BFS() {
+        queue<Point> q;
+        q.push(start);
+        Point tile;
+        string key;
+
+        while (q.size()) {
+            tile = q.front();
+            q.pop();
+            key = to_string(tile.x) + " " + to_string(tile.y);
+
+            for (int i = 0; i < nodeMap[key].size(); i++) {
+                q.push(nodeMap[key][i]);
+            }
+            cout << key<<endl;
         }
     }
 };
@@ -109,4 +134,5 @@ int main()
     maze.show();
     maze.makeNodeMap();
     maze.showNodeMap();
+    maze.BFS();
 }
