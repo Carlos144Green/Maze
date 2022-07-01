@@ -38,7 +38,7 @@ class MazeClass {
 public:
     Matrix map;
     Row row;
-
+    unordered_map<string, vector<Point>> nodeMap;
     MazeClass(Point p) { // Constructor with parameters
         row.resize(p.x, 0);
         map.resize(p.y, row);
@@ -65,11 +65,8 @@ public:
         }
     }
 
-    unordered_map<string, vector<Point>> makeNodeMap() {
+    void makeNodeMap() {
         Point p = Point(1, 1);
-        std::unordered_map<string, vector<Point>> nodeMap{
-            //{"a", Point(0,0)},
-        };
         for (int i = 0; i < map.size(); i++) {                  // x moving
             for (int j = 0; j < map[0].size(); j++) {           // y moving
                 if (map[i][j] != 1) {                           // if we aren't on a wall
@@ -92,16 +89,16 @@ public:
                 }
             }
         }
-
+    }
+    void showNodeMap() {
         unordered_map<string, vector<Point>> ::iterator  itr;
-        for (itr = nodeMap.begin(); itr != nodeMap.end(); ++itr){
+        for (itr = nodeMap.begin(); itr != nodeMap.end(); ++itr) {
             cout << itr->first << '\t';
             for (int i = 0; i < itr->second.size(); i++) {
-                cout << itr->second[i].x << itr->second[i].y<<" ";
+                cout << itr->second[i].x << itr->second[i].y << " ";
             }
             cout << endl;
         }
-        return nodeMap;
     }
 };
 
@@ -111,5 +108,5 @@ int main()
     maze.populate(Point(0, 0), Point(4, 3), 30);
     maze.show();
     maze.makeNodeMap();
-      
+    maze.showNodeMap();
 }
