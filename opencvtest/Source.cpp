@@ -10,6 +10,7 @@
 #include <time.h>
 #include <stdio.h>
 #include <queue>
+#include <stack>
 #include <windows.h>
 
 
@@ -148,42 +149,74 @@ public:
             
         }
     }
-    Point TBFS(queue <Point> &q, vector <Point> &v, bool &found, int &generation, int &count) {
+    Point TBFS(queue <Point>& q, vector <Point>& v, bool& found, int& generation, int& count) {
         Point tile = Point(-2, -2);
         if (found != 1) {
             if (q.size()) {
                 tile = q.front();
 
-                
-                    q.pop();
-                    string key = to_string(tile.x) + " " + to_string(tile.y);
 
-                    if (find(v.begin(), v.end(), tile) == v.end()) {
+                q.pop();
+                string key = to_string(tile.x) + " " + to_string(tile.y);
 
-
+                if (find(v.begin(), v.end(), tile) == v.end()) {
 
 
 
-                        for (int i = 0; i < nodeMap[key].size(); i++) {
-                            q.push(nodeMap[key][i]);
-                        }
 
-                        
-                        count--;
-                        if (count == 0) {
-                            generation++;
-                            count = q.size();
-                        }
 
-                        v.push_back(tile);
-                        map[tile.x][tile.y] = generation;
-
+                    for (int i = 0; i < nodeMap[key].size(); i++) {
+                        q.push(nodeMap[key][i]);
                     }
-                
-                    if (tile.y == end.x && tile.x == end.y) {
-                        found = 1;
-                        cout << "FOUND!!!" << endl;
+
+
+                    count--;
+                    if (count == 0) {
+                        generation++;
+                        count = q.size();
                     }
+
+                    v.push_back(tile);
+                    map[tile.x][tile.y] = generation;
+
+                }
+
+                if (tile.y == end.x && tile.x == end.y) {
+                    found = 1;
+                    cout << "FOUND!!!" << endl;
+                }
+            }
+        }
+        return tile;
+    }
+    Point TDFS(stack <Point>& q, vector <Point>& v, bool& found, int& generation, int& count, Point old) {
+        Point tile = Point(-2, -2);
+        if (found != 1) {
+            if (q.size()) {
+                tile = q.top();
+                q.pop();
+                string key = to_string(tile.x) + " " + to_string(tile.y);
+
+                if (find(v.begin(), v.end(), tile) == v.end()) {
+                    for (int i = 0; i < nodeMap[key].size(); i++) {
+                        q.push(nodeMap[key][i]);
+                    }
+
+
+                    if (abs(old.x - tile.x) < 2 && abs(old.y - tile.y) < 2) {
+                        generation++;
+                    }
+                    //
+
+                    v.push_back(tile);
+                    map[tile.x][tile.y] = generation;
+
+                }
+
+                if (tile.y == end.x && tile.x == end.y) {
+                    found = 1;
+                    cout << "FOUND!!!" << endl;
+                }
             }
         }
         return tile;
@@ -212,7 +245,6 @@ void draw(vector<vector<int>> map, Mat &img, double cell_size, Point tile = Poin
 
     if (tile ==  Point(-1, -1) ) {
         start = Point(0,0);
-
     }
     else {
         start = tile;
@@ -265,13 +297,14 @@ int main()
 
     draw(maze.map, img, cell_size);
 
-    queue<Point> q;
+    //queue<Point> q;
+    stack<Point> q;
     vector<Point> v;
     q.push(maze.start);
     bool found = 0;
     int gen = 3;
     int count = 1;
-    Point tile;
+    Point tile = maze.start;
 
     //string path = "test.png";
     //Mat img = imread(path);
@@ -280,7 +313,7 @@ int main()
 
     
     while (true) {
-        tile = maze.TBFS(q, v, found, gen, count);
+        tile = maze.TDFS(q, v, found, gen, count, tile);
         draw(maze.map, img, cell_size, tile);
 
 
