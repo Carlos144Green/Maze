@@ -159,13 +159,25 @@ public:
                     string key = to_string(tile.x) + " " + to_string(tile.y);
 
                     if (find(v.begin(), v.end(), tile) == v.end()) {
-                        cout << key << endl;
+
+
+
+
+
                         for (int i = 0; i < nodeMap[key].size(); i++) {
                             q.push(nodeMap[key][i]);
                         }
 
+                        
+                        count--;
+                        if (count == 0) {
+                            generation++;
+                            count = q.size();
+                        }
+
                         v.push_back(tile);
-                        map[tile.x][tile.y] = 3;
+                        map[tile.x][tile.y] = generation;
+
                     }
                 
                     if (tile.y == end.x && tile.x == end.y) {
@@ -200,8 +212,6 @@ void draw(vector<vector<int>> map, Mat &img, double cell_size, Point tile = Poin
 
     if (tile ==  Point(-1, -1) ) {
         start = Point(0,0);
-        cout << start.x << start.y << endl;
-        cout << tile.x <<tile.y<< endl;
 
     }
     else {
@@ -218,13 +228,13 @@ void draw(vector<vector<int>> map, Mat &img, double cell_size, Point tile = Poin
                     fill = -1;
                     color = cv::Scalar(10, 200, 10);
                 }
-                else if (map[i][j] == 3) {
+                else if (map[i][j] == 0) {
                     fill = 1;
-                    color = cv::Scalar(255, 20, 0);
+                    color = cv::Scalar(0,0,0);
                 }
                 else {
                     fill = 1;
-                    color = cv::Scalar(0, 0, 0);
+                    color = cv::Scalar(17 * map[i][j] % 255, 50*map[i][j]%255, 39 * map[i][j] % 255);
                 }
 
                 cv::rectangle(img, Point(i * cell_size + 1, j * cell_size + 1), Point((i + 1) * cell_size - 2, (j + 1) * cell_size - 2), color, fill);
@@ -236,6 +246,7 @@ void draw(vector<vector<int>> map, Mat &img, double cell_size, Point tile = Poin
         }
     }
 }
+
 int main()
 {
     cvui::init(WINDOW_NAME);
@@ -243,9 +254,9 @@ int main()
     
     MazeClass maze(Point(80, 80));
     maze.populate(Point(0, 0), Point(79, 60), 30);
-    maze.show();
+    //maze.show();
     maze.makeNodeMap();
-    maze.showNodeMap();
+    //maze.showNodeMap();
     
     //maze.BFS();
     Point xy = resize(maze.map, cell_size);
@@ -258,8 +269,8 @@ int main()
     vector<Point> v;
     q.push(maze.start);
     bool found = 0;
-    int gen = 0;
-    int count = 0;
+    int gen = 3;
+    int count = 1;
     Point tile;
 
     //string path = "test.png";
