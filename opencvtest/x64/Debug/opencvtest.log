@@ -1,27 +1,5 @@
 ﻿  Source.cpp
   cvui.h: compiling implementation because of CVUI_IMPLEMENTATION. See: https://dovyski.github.io/cvui/usage/
-C:\Users\cuartasca\source\repos\opencvtest\opencvtest\Source.cpp(176,1): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
-C:\Users\cuartasca\source\repos\opencvtest\opencvtest\Source.cpp(211,1): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
-C:\Users\cuartasca\source\repos\opencvtest\opencvtest\Source.cpp(275,75): warning C4244: 'argument': conversion from 'double' to '_Tp', possible loss of data
-          with
-          [
-              _Tp=int
-          ]
-C:\Users\cuartasca\source\repos\opencvtest\opencvtest\Source.cpp(275,56): warning C4244: 'argument': conversion from 'double' to '_Tp', possible loss of data
-          with
-          [
-              _Tp=int
-          ]
-C:\Users\cuartasca\source\repos\opencvtest\opencvtest\Source.cpp(275,132): warning C4244: 'argument': conversion from 'double' to '_Tp', possible loss of data
-          with
-          [
-              _Tp=int
-          ]
-C:\Users\cuartasca\source\repos\opencvtest\opencvtest\Source.cpp(275,107): warning C4244: 'argument': conversion from 'double' to '_Tp', possible loss of data
-          with
-          [
-              _Tp=int
-          ]
-C:\Users\cuartasca\source\repos\opencvtest\opencvtest\Source.cpp(277,35): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
-C:\Users\cuartasca\source\repos\opencvtest\opencvtest\Source.cpp(278,38): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
+C:\Users\cuartasca\source\repos\opencvtest\opencvtest\Source.cpp(98,32): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
+C:\Users\cuartasca\source\repos\opencvtest\opencvtest\Source.cpp(100,32): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
   opencvtest.vcxproj -> C:\Users\cuartasca\source\repos\opencvtest\x64\Debug\opencvtest.exe
