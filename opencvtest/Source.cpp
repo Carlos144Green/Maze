@@ -12,6 +12,8 @@
 #include <queue>
 #include <stack>
 #include <windows.h>
+#include <chrono>
+#include <thread>
 
 #define CVUI_IMPLEMENTATION
 #include "cvui.h"
@@ -24,13 +26,13 @@ int width = (int)GetSystemMetrics(SM_CXSCREEN);
 int height = (int)GetSystemMetrics(SM_CYSCREEN);
 
 
-//j is the rows
-//i is the columns
+//i is the rows
+//j is the columns
 class Cell {
 public:
     int x;
     int y;
-    vector<bool> walls = { 1,1,0,1 };
+    vector<bool> walls = { 1,1,1,1 };
     bool v = false;
 
     Cell(int x_in, int y_in) {
@@ -43,19 +45,18 @@ public:
     }
 
     void show(Mat img, int cell_size) {
+        if (v) {
+            cv::rectangle(img, Point(x * cell_size, y * cell_size), Point(x * cell_size + cell_size, y * cell_size + cell_size), Scalar(0, 100, 0), -1);
+        }
+
         if (walls[0] == 1)
             cv::line(img, Point(x * cell_size, y * cell_size), Point(x * cell_size + cell_size, y * cell_size), Scalar(255, 255, 255));
         if (walls[1] == 1)
-            cv::line(img, Point(x * cell_size +cell_size, y * cell_size+ cell_size), Point(x * cell_size + cell_size, y * cell_size), Scalar(255, 255, 255));
+            cv::line(img, Point(x * cell_size +cell_size-1, y * cell_size+ cell_size), Point(x * cell_size + cell_size-1, y * cell_size), Scalar(255, 255, 255));
         if (walls[2] == 1)
-            cv::line(img, Point(x * cell_size, y * cell_size + cell_size), Point(x * cell_size + cell_size, y * cell_size+ cell_size), Scalar(255, 255, 255));
+            cv::line(img, Point(x * cell_size, y * cell_size + cell_size-1), Point(x * cell_size + cell_size, y * cell_size+ cell_size-1), Scalar(255, 255, 255));
         if (walls[3] == 1)
             cv::line(img, Point(x * cell_size, y * cell_size), Point(x * cell_size , y * cell_size + cell_size), Scalar(255, 255, 255));
-        
-
-        if (v) {
-            cv::rectangle(img, Point(x * cell_size, y * cell_size), Point(x * cell_size + cell_size, y * cell_size + cell_size),Scalar(0,100,0),-1);
-        }
     }
 
 };
@@ -71,19 +72,19 @@ public:
     Point mapSize;
     int cell_size = 0;
     MazeClass(Point p) { // Constructor with parameters
-        mapSize = Point(p.y,p.x);
-        row.resize(mapSize.x, l);
-        map.resize(mapSize.y, row);
+        mapSize = Point(p.x,p.y);
+        row.resize(mapSize.y, l);
+        map.resize(mapSize.x, row);
+
     }
 
-    void populate(Point start_xy, Point end_xy, int density) {
+    void populate() {
         Cell cell;
-        for (int j = 0; j < map.size(); j++) {
-            for (int i = 0; i < map[0].size(); i++) {
+        for (int i = 0; i < map.size(); i++) {
+            for (int j = 0; j < map[0].size(); j++) {
                 cell = Cell(i, j);
-                map[j][i] = cell;
+                map[i][j] = cell;
             }
-
         }
     }
 
@@ -104,23 +105,23 @@ public:
         return Point(x, y);
     }
     void show_all(Mat img) {
-        for (int j = 0; j < mapSize.x; j++) {
-            for (int i = 0; i < mapSize.y; i++) {
-                map[j][i].show(img, cell_size);
+        for (int i = 0; i < mapSize.x; i++) {
+            for (int j = 0; j < mapSize.y; j++) {
+                map[i][j].show(img, cell_size);
             }
         }
     }
     Point nextMove(Point current) {
         srand((unsigned)time(NULL));
-        int j = current.x;
-        int i = current.y;
+        int i = current.x;
+        int j = current.y;
 
         cout << i << j << ": ";
         vector <Point> neighbors;
-        vector <Point> touching = { Point(-1,0), Point(0,1), Point(1,0), Point(0,-1) };
+        vector <Point> touching = { Point(0,-1), Point(1,0), Point(0,1), Point(-1,0) };
 
         for (int k = 0; k < 4; k++) {                       // loops through all neighbors
-            Point thisNeighbor = Point(j, i) + touching[k]; // checks if any neighbors are out of bounds
+            Point thisNeighbor = Point(i, j) + touching[k]; // checks if any neighbors are out of bounds
             if ((thisNeighbor.x >= 0 && thisNeighbor.x < mapSize.x) && (thisNeighbor.y >= 0 && thisNeighbor.y < mapSize.y)) {
                 if (map[thisNeighbor.x][thisNeighbor.y].v != true) {                  // if neighbor is new
                     neighbors.push_back(Point(thisNeighbor.x, thisNeighbor.y));   // push to stack?
@@ -145,11 +146,11 @@ int main()
 {
     cvui::init(WINDOW_NAME);
 
-    Point mazeSize = Point(2, 2);
+    Point mazeSize = Point(8, 4);
     Point mazeStart = Point(0, 0);
     Point mazeEnd = Point(mazeSize.x - 1, mazeSize.y - 1);
     MazeClass maze(mazeSize);
-    maze.populate(Point(0, 0), Point(0, 2), 30);
+    maze.populate();
     
     
     //canvas size/show
@@ -157,18 +158,20 @@ int main()
     cv::Mat img = cv::Mat(cv::Size(canvasSize.x+1, canvasSize.y+1), CV_8UC3);
     img = cv::Scalar(0, 0, 0);
 
-    Point next;
-    Point current = Point(0,0);
+    Point next = mazeStart;
+    Point current;
 
-    //while (current != Point(-1, -1)) {
-        cout << "ASDA" << endl;
-        maze.map[current.y][current.x].v = true;
-        //show grid
+    while (next != Point(-1, -1)){
+        current = next;
+        maze.map[current.x][current.y].v = true;
+        
+        next = maze.nextMove(current);
         maze.show_all(img);
-        current = maze.nextMove(current);
-    //}
-    
-    cvui::imshow(WINDOW_NAME,img);
+        cvui::imshow(WINDOW_NAME, img);
+        if (cv::waitKey(20) == 27) 
+            break;
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
     cv::waitKey(0);
 
     return 1;
