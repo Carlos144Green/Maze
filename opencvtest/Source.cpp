@@ -66,14 +66,16 @@ public:
     vector< vector<Cell>>  map;
     vector<Cell>  row;
     unordered_map<string, vector<Point>> nodeMap;
-    Point start;
+    Point start= Point(0, 0);
     Point end;
-    Cell l;
+    Cell templateCell;
+    Point currCell = start;
+    Point next = start;
     Point mapSize;
     int cell_size = 0;
     MazeClass(Point p) { // Constructor with parameters
         mapSize = Point(p.x,p.y);
-        row.resize(mapSize.y, l);
+        row.resize(mapSize.y, templateCell);
         map.resize(mapSize.x, row);
 
     }
@@ -110,6 +112,7 @@ public:
                 map[i][j].show(img, cell_size);
             }
         }
+        highlight(img);
     }
     Point nextMove(Point current) {
         srand((unsigned)time(NULL));
@@ -126,7 +129,6 @@ public:
                 if (map[thisNeighbor.x][thisNeighbor.y].v != true) {                  // if neighbor is new
                     neighbors.push_back(Point(thisNeighbor.x, thisNeighbor.y));   // push to stack?
                     cout << thisNeighbor.x << thisNeighbor.y << "  ";
-
                 }
             }
         }
@@ -135,9 +137,51 @@ public:
         if (neighbors.size()>0) {
             return neighbors[rand() % neighbors.size()];
         }
-
         return Point(-1, -1);
     }
+    void highlight(Mat img) {
+        int x = currCell.x;
+        int y = currCell.y;
+        cv::rectangle(img, Point(x * cell_size+2, y * cell_size+2), Point(x * cell_size + cell_size-2, y * cell_size + cell_size-2), Scalar(0, 150, 0), -1);
+    }
+
+    void removeWalls(Point a, Point b) {
+        int x = a.x - b.x;
+        int y = a.y - b.y;
+        if (x == 1) {
+            map[a.x][a.y].walls[3] = false;
+            map[b.x][b.y].walls[1] = false;
+        }
+        else if (x == -1) {
+            map[a.x][a.y].walls[1] = false;
+            map[b.x][b.y].walls[3] = false;
+        }
+        if (y == 1) {
+            map[a.x][a.y].walls[0] = false;
+            map[b.x][b.y].walls[2] = false;
+        }
+        else if (y == -1) {
+            map[a.x][a.y].walls[2] = false;
+            map[b.x][b.y].walls[0] = false;
+        }
+
+    }
+
+    void makeMove() {
+        if (next != Point(-1, -1)) {
+
+            removeWalls(next,currCell);
+            currCell = next;
+            map[currCell.x][currCell.y].v = true;
+
+
+
+            next = nextMove(currCell);
+
+
+        }
+    }
+
 };
 
 
@@ -146,7 +190,7 @@ int main()
 {
     cvui::init(WINDOW_NAME);
 
-    Point mazeSize = Point(8, 4);
+    Point mazeSize = Point(80, 40);
     Point mazeStart = Point(0, 0);
     Point mazeEnd = Point(mazeSize.x - 1, mazeSize.y - 1);
     MazeClass maze(mazeSize);
@@ -162,17 +206,13 @@ int main()
     Point current;
 
     while (next != Point(-1, -1)){
-        current = next;
-        maze.map[current.x][current.y].v = true;
-        
-        next = maze.nextMove(current);
+        maze.makeMove();
         maze.show_all(img);
         cvui::imshow(WINDOW_NAME, img);
         if (cv::waitKey(20) == 27) 
             break;
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
-    cv::waitKey(0);
 
     return 1;
 }
