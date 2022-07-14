@@ -58,9 +58,14 @@ public:
         if (walls[3] == 1)
             cv::line(img, Point(x * cell_size, y * cell_size), Point(x * cell_size , y * cell_size + cell_size), Scalar(255, 255, 255));
     }
-
 };
+/*
+ Maze:
 
+ GeneratedMaze:
+
+ TranslatedMaze:
+*/
 class MazeClass {
 public:
     vector< vector<Cell>>  map;
@@ -120,7 +125,7 @@ public:
         int i = current.x;
         int j = current.y;
 
-        cout << i << j << ": ";
+        //cout << i << j << ": ";
         vector <Point> neighbors;
         vector <Point> touching = { Point(0,-1), Point(1,0), Point(0,1), Point(-1,0) };
 
@@ -129,11 +134,11 @@ public:
             if ((thisNeighbor.x >= 0 && thisNeighbor.x < mapSize.x) && (thisNeighbor.y >= 0 && thisNeighbor.y < mapSize.y)) {
                 if (map[thisNeighbor.x][thisNeighbor.y].v != true) {                  // if neighbor is new
                     neighbors.push_back(Point(thisNeighbor.x, thisNeighbor.y));   // push to stack?
-                    cout << thisNeighbor.x << thisNeighbor.y << "  ";
+                    //cout << thisNeighbor.x << thisNeighbor.y << "  ";
                 }
             }
         }
-        cout << endl;
+        //cout << endl;
 
         if (neighbors.size()>0) {
             return neighbors[rand() % neighbors.size()];
@@ -170,18 +175,13 @@ public:
 
     void makeMove(bool &noMoves) {
         if (next != Point(-1, -1)) {
-
-
-
             removeWalls(next,currCell);
             currCell = next;
             map[currCell.x][currCell.y].v = true;
 
             stack.push(currCell);
 
-
             next = nextMove(currCell);
-
 
         }
         else if (stack.size()>0) {
@@ -195,36 +195,49 @@ public:
             noMoves = true;
         }
     }
+    void generateMaze(Mat img) {
+        bool noMoves = false;
+
+        while (noMoves == false) {
+            img = cv::Scalar(0, 0, 0);
+
+            makeMove(noMoves);
+            show_all(img);
+            cvui::imshow(WINDOW_NAME, img);
+            if (cv::waitKey(1) == 27)
+                break;
+        }
+    }
+
 
 };
 
-
-
+void pause(Mat img) {
+    cv::putText(img, "Press any key to continue!", Point(50, 50),cv::FONT_HERSHEY_COMPLEX_SMALL,2,Scalar(255,255,255),2);
+    while (true) {
+        cvui::imshow(WINDOW_NAME, img);
+        if (cv::waitKey(0))
+            break;
+    }
+}
 int main()
 {
     cvui::init(WINDOW_NAME);
-
-    Point mazeSize = Point(10,4);
+    Point mazeSize = Point(10,10);
     Point mazeStart = Point(0, 0);
     Point mazeEnd = Point(mazeSize.x - 1, mazeSize.y - 1);
     MazeClass maze(mazeSize);
     maze.populate();
-    
-    
-    //canvas size/show
+
     Point canvasSize = maze.resize();
-    cv::Mat img = cv::Mat(cv::Size(canvasSize.x+1, canvasSize.y+1), CV_8UC3);
+    cv::Mat img = cv::Mat(cv::Size(canvasSize.x + 1, canvasSize.y + 1), CV_8UC3);
     img = cv::Scalar(0, 0, 0);
-    bool noMoves = false;
 
-    while (noMoves == false){
-        maze.makeMove(noMoves);
-        maze.show_all(img);
-        cvui::imshow(WINDOW_NAME, img);
-        if (cv::waitKey(20) == 27) 
-            break;
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    }
+    maze.show_all(img);
+    pause(img);
 
+    maze.generateMaze(img);
+    pause(img);
+    //maze.BFS();
     return 1;
 }
