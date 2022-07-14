@@ -78,6 +78,9 @@ public:
     Point next = start;
     Point mapSize;
     stack <Point> stack;
+    queue <Point> q;
+    vector <Point> touching = { Point(0,-1), Point(1,0), Point(0,1), Point(-1,0) };
+
     int cell_size = 0;
     MazeClass(Point p) { // Constructor with parameters
         mapSize = Point(p.x,p.y);
@@ -127,13 +130,12 @@ public:
 
         //cout << i << j << ": ";
         vector <Point> neighbors;
-        vector <Point> touching = { Point(0,-1), Point(1,0), Point(0,1), Point(-1,0) };
 
         for (int k = 0; k < 4; k++) {                       // loops through all neighbors
             Point thisNeighbor = Point(i, j) + touching[k]; // checks if any neighbors are out of bounds
             if ((thisNeighbor.x >= 0 && thisNeighbor.x < mapSize.x) && (thisNeighbor.y >= 0 && thisNeighbor.y < mapSize.y)) {
                 if (map[thisNeighbor.x][thisNeighbor.y].v != true) {                  // if neighbor is new
-                    neighbors.push_back(Point(thisNeighbor.x, thisNeighbor.y));   // push to stack?
+                    neighbors.push_back(thisNeighbor);   // push to stack?
                     //cout << thisNeighbor.x << thisNeighbor.y << "  ";
                 }
             }
@@ -193,6 +195,11 @@ public:
         }
         else {
             noMoves = true;
+            for (int i = 0; i < map.size(); i++) {
+                for (int j = 0; j < map[0].size(); j++) {
+                    map[i][j].v = false;
+                }
+            }
         }
     }
     void generateMaze(Mat img) {
@@ -208,11 +215,33 @@ public:
                 break;
         }
     }
-
+    void BFS(Mat img) {
+        Point node;
+        vector <Point> touching = { Point(0,-1), Point(1,0), Point(0,1), Point(-1,0) };
+        q.push(start);
+        while (q.size() != 0) {
+            node = q.front();
+            q.pop();
+            if (map[node.x][node.y].v == false) {
+                map[node.x][node.y].v = true;
+                for (int k = 0; k < 4; k++) {                       // loops through all neighbors
+                    if (map[node.x][node.y].walls[k]== false) {
+                        
+                        q.push(touching[k] + node);
+                    }
+                }
+            }
+            show_all(img);
+            cvui::imshow(WINDOW_NAME, img);
+            if (cv::waitKey(1) == 27)
+                break;
+        }
+    }
 
 };
 
 void pause(Mat img) {
+    cv::rectangle(img, Rect(40, 10, 700, 50), Scalar(100, 100, 100), -1);
     cv::putText(img, "Press any key to continue!", Point(50, 50),cv::FONT_HERSHEY_COMPLEX_SMALL,2,Scalar(255,255,255),2);
     while (true) {
         cvui::imshow(WINDOW_NAME, img);
@@ -220,10 +249,11 @@ void pause(Mat img) {
             break;
     }
 }
+
 int main()
 {
     cvui::init(WINDOW_NAME);
-    Point mazeSize = Point(10,10);
+    Point mazeSize = Point(40,50);
     Point mazeStart = Point(0, 0);
     Point mazeEnd = Point(mazeSize.x - 1, mazeSize.y - 1);
     MazeClass maze(mazeSize);
@@ -238,6 +268,9 @@ int main()
 
     maze.generateMaze(img);
     pause(img);
-    //maze.BFS();
+
+
+    maze.BFS(img);
+    pause(img);
     return 1;
 }
