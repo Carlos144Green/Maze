@@ -72,6 +72,7 @@ public:
     Point currCell = start;
     Point next = start;
     Point mapSize;
+    stack <Point> stack;
     int cell_size = 0;
     MazeClass(Point p) { // Constructor with parameters
         mapSize = Point(p.x,p.y);
@@ -167,18 +168,31 @@ public:
 
     }
 
-    void makeMove() {
+    void makeMove(bool &noMoves) {
         if (next != Point(-1, -1)) {
+
+
 
             removeWalls(next,currCell);
             currCell = next;
             map[currCell.x][currCell.y].v = true;
 
+            stack.push(currCell);
 
 
             next = nextMove(currCell);
 
 
+        }
+        else if (stack.size()>0) {
+            next = stack.top();
+            stack.pop();
+            currCell = next;
+
+            next = nextMove(currCell);
+        }
+        else {
+            noMoves = true;
         }
     }
 
@@ -190,7 +204,7 @@ int main()
 {
     cvui::init(WINDOW_NAME);
 
-    Point mazeSize = Point(80, 40);
+    Point mazeSize = Point(10,4);
     Point mazeStart = Point(0, 0);
     Point mazeEnd = Point(mazeSize.x - 1, mazeSize.y - 1);
     MazeClass maze(mazeSize);
@@ -201,12 +215,10 @@ int main()
     Point canvasSize = maze.resize();
     cv::Mat img = cv::Mat(cv::Size(canvasSize.x+1, canvasSize.y+1), CV_8UC3);
     img = cv::Scalar(0, 0, 0);
+    bool noMoves = false;
 
-    Point next = mazeStart;
-    Point current;
-
-    while (next != Point(-1, -1)){
-        maze.makeMove();
+    while (noMoves == false){
+        maze.makeMove(noMoves);
         maze.show_all(img);
         cvui::imshow(WINDOW_NAME, img);
         if (cv::waitKey(20) == 27) 
