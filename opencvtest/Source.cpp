@@ -19,6 +19,8 @@
 #include "cvui.h"
 #define WINDOW_NAME "CVUI Test"
 
+HWND hMainWindow;
+
 using namespace cv;
 using namespace std;
 
@@ -76,13 +78,15 @@ public:
     vector <Point> touching = { Point(0,-1), Point(1,0), Point(0,1), Point(-1,0) };
     Point canvasSize;
     queue <Point> q;
-    bool noMoves = false;
+    bool hasMoves = true;
 
 
     int cell_size = 0;
     Maze(Point p, Point mazeStart, Point mazeEnd) { // Constructor with parameters
         mazeSize = Point(p.x,p.y);
+        row.reserve(mazeSize.y);
         row.resize(mazeSize.y, templateCell);
+        cellMaze.reserve(mazeSize.x);
         cellMaze.resize(mazeSize.x, row);
         start = mazeStart;
         end = mazeEnd;
@@ -120,6 +124,7 @@ public:
         return canvasSize;
     }
     void drawFrame(Mat img) {
+
         for (int i = 0; i < mazeSize.x; i++) {
             for (int j = 0; j < mazeSize.y; j++) {
                 cellMaze[i][j].show(img, cell_size);
@@ -132,6 +137,7 @@ public:
         
         int i = current.x;
         int j = current.y;
+        srand((unsigned)time(NULL));
 
         //cout << i << j << ": ";
         vector <Point> neighbors;
@@ -179,37 +185,31 @@ public:
         }
     }
 
-    void generateMaze() {
-        if (noMoves == false) {
-            if (next != Point(-1, -1)) {
-                removeWalls(next, currCell);
-                currCell = next;
-                cellMaze[currCell.x][currCell.y].v = true;
+    bool generateMaze() {
+        if (next != Point(-1, -1)) {
+            removeWalls(next, currCell);
+            currCell = next;
+            cellMaze[currCell.x][currCell.y].v = true;
 
-                stack.push(currCell);
-                next = nextMove(currCell);
+            stack.push(currCell);
+            next = nextMove(currCell);
+        }
+        else if (stack.size() > 0) {
+            next = stack.top();
+            stack.pop();
+            currCell = next;
+            next = nextMove(currCell);
+        }
+        else {
+            hasMoves = false;
+            for (int i = 0; i < mazeSize.x; i++) {
+                for (int j = 0; j < mazeSize.y; j++) {
+                    cellMaze[i][j].v = false;
 
-
-            }
-            else if (stack.size() > 0) {
-                next = stack.top();
-                stack.pop();
-                currCell = next;
-                cout << "WWWWWWWWWWWWWWWWWWWWWW" << endl;
-                next = nextMove(currCell);
-            }
-            else {
-                cout << "fffffffffffffffffffff" << endl;
-
-                noMoves = true;
-                for (int i = 0; i < mazeSize.x; i++) {
-                    for (int j = 0; j < mazeSize.y; j++) {
-                        cellMaze[i][j].v = false;
-                    }
                 }
             }
         }
-
+        return hasMoves;
     }
 
     void BFS(Mat img, int &state) {
@@ -231,53 +231,28 @@ public:
         }
     }
 };
-//class TraverseMaze {
-//public:
-//    vector<vector<Cell>> cellMaze;
-//    Point start;
-//    Point end;
-//    queue <Point> q;
-//    TraverseMaze(vector<vector<Cell>> mazeMap, Point mazeStart, Point mazeEnd ) {
-//        cellMaze = mazeMap; 
-//        start = mazeStart;
-//        end = mazeEnd;
-//    }
-//
-//
-//
-//
-//};
+
+void open_file_prompt(HWND hWnd) {
+    //yash code here
+}
 
 
-//int main()
-//{
-//    srand((unsigned)time(NULL));
-//    cvui::init(WINDOW_NAME);
-//    Point mazeSize = Point(20,20);
-//    Point mazeStart = Point(0, 0);
-//    Point mazeEnd = Point(mazeSize.x - 1, mazeSize.y - 1);
-//    Maze maze(mazeSize,mazeStart,mazeEnd);
-//
-//    Point canvasSize = maze.resize();
-//    cv::Mat img = cv::Mat(cv::Size(canvasSize.x, canvasSize.y), CV_8UC3);
-//    img = cv::Scalar(0, 0, 0);
-//
-//    maze.drawFrame(img);
-//    maze.pause(img);
-//    maze.generateMaze(img);
-//    maze.pause(img);
-//    maze.BFS(img);
-//    maze.pause(img);
-//
-//    return 1;
-//}
 void setup() {
-    srand((unsigned)time(NULL));
+    //srand((unsigned)time(NULL));
     cvui::init(WINDOW_NAME);
 }
 int drawButtons(Mat img, Maze maze, Point canvasSize) {
-    if (cvui::button(img, 100, canvasSize.y - 40, "Start Step!")) {
+    img = cv::Scalar(0, 0, 0);
+    // More buttons will be added later, I plan on having the buttons gray out after use but that will be a problem for later.
+    if (cvui::button(img, 100, canvasSize.y - 60, "Generate Maze")) {
         return 1;
+    }
+
+    if (cvui::button(img, 100, canvasSize.y - 30, "Open File")) {
+        return 2;
+    }
+    if (cvui::button(img, 250, canvasSize.y - 60, "Start BFS")) {
+        return 4;
     }
     else
         return 0;
@@ -294,21 +269,30 @@ void stateMachine(Mat img, Maze &maze,int &state, int buttonInput) {
         case 0:
             break;
         case 1:
-            maze.generateMaze();
+            if (maze.generateMaze() == false)
+                state++;
+                break;
+            break;
+        case 2:
+
             break;
         case 3:
+            
+            break;
+        case 4:
             maze.BFS(img, state);
             break;
     default:
         break;
     }
 
+
 }
 
 int main()
 {
     setup();
-    Point mazeSize = Point(20, 20);
+    Point mazeSize = Point(60, 40);
     Point mazeStart = Point(0, 0);
     Point mazeEnd = Point(mazeSize.x - 1, mazeSize.y - 1);
     Maze maze(mazeSize, mazeStart, mazeEnd);
@@ -316,13 +300,14 @@ int main()
     Point canvasSize = maze.resize();
     cv::Mat img = cv::Mat(cv::Size(canvasSize.x, canvasSize.y), CV_8UC3);
     img = cv::Scalar(0, 0, 0);
-    int buttonInput=0;
-    int state =0;
+    int buttonInput = 0;
+    int state = 0;
     while (true) {
-        maze.drawFrame(img);
 
         buttonInput = drawButtons(img, maze, canvasSize);
         stateMachine(img, maze, state, buttonInput);
+        maze.drawFrame(img);
+
         cvui::imshow(WINDOW_NAME, img);
         if (cv::waitKey(1) == 27)
             break;
