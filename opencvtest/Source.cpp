@@ -232,7 +232,7 @@ public:
     }
 };
 
-void open_file_prompt(HWND hWnd) {
+void open_file_prompt() {
     //yash code here
 }
 
