@@ -1,0 +1,5 @@
+﻿  Source.cpp
+  cvui.h: compiling implementation because of CVUI_IMPLEMENTATION. See: https://dovyski.github.io/cvui/usage/
+C:\Users\cuartasca\source\repos\opencvtest\opencvtest\Source.cpp(117,32): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
+C:\Users\cuartasca\source\repos\opencvtest\opencvtest\Source.cpp(119,32): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
+  opencvtest.vcxproj -> C:\Users\cuartasca\source\repos\opencvtest\x64\Debug\opencvtest.exe
