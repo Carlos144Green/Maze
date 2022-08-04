@@ -14,6 +14,7 @@
 #include <windows.h>
 #include <chrono>
 #include <thread>
+#include <numeric>
 
 #define CVUI_IMPLEMENTATION
 #include "cvui.h"
@@ -261,7 +262,7 @@ void importMaze() {
     Mat gray;
     Mat blur;
     vector<Vec2f> lines;
-    string file = "C:\\Users\\cuartasca\\Pictures\\maze4.jpg";
+    string file = "C:\\Users\\cuartasca\\Pictures\\maze11.jpg";
     open_file_prompt();
     std::string image_path = samples::findFile(file);
     Mat img = imread(image_path, IMREAD_COLOR);
@@ -291,6 +292,7 @@ void importMaze() {
 
     vector<float> rowSpectrum;
     cv::Scalar tempVal;
+    //cout << "height" << endl;
     for (int i = 0; i < ROI.size().height; i++) {
         tempVal = cv::mean(blur.row(i));
         //cout << tempVal.val[0] << endl;
@@ -328,13 +330,16 @@ void importMaze() {
     }
     vector<Point> allPassingCols;
     vector<float> colSpectrum;
+    cout << "width" << endl;
+
     for (int i = 0; i < ROI.size().width; i++) {
         tempVal = cv::mean(blur.col(i));
-        cout << tempVal.val[0] << endl;
+        //cout << tempVal.val[0] << endl;
 
         colSpectrum.push_back(float(tempVal.val[0]));
     }
-    out = Mat(colSpectrum).reshape(1);
+    tempPoint = Point(0,0);
+    
     mean = cv::mean(colSpectrum);
     for (int j = 0; j < ROI.size().width; j++) {
         if (colSpectrum[j] < mean.val[0]) {
@@ -355,23 +360,54 @@ void importMaze() {
         }
         last = colSpectrum[j];
     }
+    vector<int> colLines;
+    int sums = 0;
+    cout << endl;
     for (int i = 0; i < allPassingCols.size(); i++) {
-        //cout << "row " << i << ": " << allPassingCols[i] << endl;
-        cv::line(ROI, Point(int((allPassingCols[i].x + allPassingCols[i].y) / 2),0), Point(int((allPassingCols[i].x + allPassingCols[i].y) / 2), ROI.size().height), Scalar(100, 255, 0), 1);
+        colLines.push_back((allPassingCols[i].x + allPassingCols[i].y) / 2);
+        //cout << colLines[i] << endl;
+    }
+    vector<int> lineSpacing;
+    for (int i = 1; i < allPassingCols.size(); i++) {
+        lineSpacing.push_back(colLines[i] - colLines[i - 1]);
     }
 
-    
+    vector<double> diff(lineSpacing.size());
+    double sum = accumulate(lineSpacing.begin(), lineSpacing.end(), 0.0);
 
+    double means = sum / lineSpacing.size();
+    transform(lineSpacing.begin(), lineSpacing.end(), diff.begin(), [means](double x) { return x - means; });
+    double sq_sum = std::inner_product(diff.begin(), diff.end(), diff.begin(), 0.0);
+    double stdev = std::sqrt(sq_sum / lineSpacing.size());
+    cout << stdev << endl;
+    vector<int> newColLines;
+
+    for (int i = 0; i < colLines.size(); i++) {
+        cv::line(ROI, Point(colLines[i], 0), Point(colLines[i], ROI.size().height), Scalar(0, 0, 250), 2);
+    }
+    for (int i = 0; i < lineSpacing.size(); i++)
+    {
+        newColLines.push_back(colLines[i]);
+
+        if (abs(lineSpacing[i]-means)>stdev*1) {
+            newColLines.push_back(colLines[i]+means);
+            if (int(means) % abs(lineSpacing[i + 1] - colLines[i]) >stdev *2.3) {
+                cout << "cry" << endl;
+                colLines[i + 1] = colLines[i] + means;
+                lineSpacing[i + 1] = colLines[i + 1] - colLines[i];
+            }
+        }
+    }
+    newColLines.push_back(colLines.back());
+    for (int i = 0; i < newColLines.size(); i++) {
+        cv::line(ROI, Point(newColLines[i], 0), Point(newColLines[i], ROI.size().height), Scalar(100, 255, 0), 1);
+    }
 
     cvui::imshow("test", img);
-
-
 }
 void stateMachine(Mat img, Maze &maze,int &state, int buttonInput) {
     if (buttonInput != 0)
         state = buttonInput;
-    
-
     switch (state)
     {
         case 0:
@@ -382,10 +418,8 @@ void stateMachine(Mat img, Maze &maze,int &state, int buttonInput) {
                 break;
             break;
         case 2:
-
             importMaze();
             state++;
-
             break;
         case 3:
 
@@ -399,8 +433,6 @@ void stateMachine(Mat img, Maze &maze,int &state, int buttonInput) {
     default:
         break;
     }
-
-
 }
 
 int main()
@@ -417,7 +449,6 @@ int main()
     int buttonInput = 0;
     int state = 0;
     while (true) {
-
         buttonInput = drawButtons(img, maze, canvasSize);
         stateMachine(img, maze, state, buttonInput);
         maze.drawFrame(img);
@@ -426,7 +457,6 @@ int main()
         if (cv::waitKey(1) == 27)
             break;
     }
-
 
     return 1;
 }
