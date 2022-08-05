@@ -2,12 +2,8 @@
   cvui.h: compiling implementation because of CVUI_IMPLEMENTATION. See: https://dovyski.github.io/cvui/usage/
 C:\Users\cuartasca\source\repos\opencvtest\opencvtest\Source.cpp(118,32): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
 C:\Users\cuartasca\source\repos\opencvtest\opencvtest\Source.cpp(120,32): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
-C:\Users\cuartasca\source\repos\opencvtest\opencvtest\Source.cpp(393,46): warning C4244: 'argument': conversion from 'double' to '_Ty', possible loss of data
-          with
-          [
-              _Ty=int
-          ]
-C:\Users\cuartasca\source\repos\opencvtest\opencvtest\Source.cpp(396,47): warning C4244: '=': conversion from 'double' to '_Ty', possible loss of data
+C:\Users\cuartasca\source\repos\opencvtest\opencvtest\Source.cpp(393,27): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+C:\Users\cuartasca\source\repos\opencvtest\opencvtest\Source.cpp(403,51): warning C4244: 'argument': conversion from 'double' to '_Ty', possible loss of data
           with
           [
               _Ty=int

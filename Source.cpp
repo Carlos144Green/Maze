@@ -232,42 +232,23 @@ public:
     }
 };
 
-void open_file_prompt() {
-    //yash code here
+string getMazePath() {
+    //should open window for file selection of maze image of any format.
+    //for now it is just hard coded
+    string filePath = "C:\\Users\\cuartasca\\Pictures\\maze9.jpg";
+    return filePath;
 }
+//pullImgAndResize(){}
 
-
-void setup() {
-    //srand((unsigned)time(NULL));
-    cvui::init(WINDOW_NAME);
-}
-int drawButtons(Mat img, Maze maze, Point canvasSize) {
-    img = cv::Scalar(0, 0, 0);
-    // More buttons will be added later, I plan on having the buttons gray out after use but that will be a problem for later.
-    if (cvui::button(img, 100, canvasSize.y - 60, "Generate Maze")) {
-        return 1;
-    }
-
-    if (cvui::button(img, 100, canvasSize.y - 30, "Open File")) {
-        return 2;
-    }
-    if (cvui::button(img, 250, canvasSize.y - 60, "Start BFS")) {
-        return 5;
-    }
-    else
-        return 0;
-
-}
-void importMaze() {
+void importMaze(string filePath) {
     Mat gray;
     Mat blur;
     vector<Vec2f> lines;
-    string file = "C:\\Users\\cuartasca\\Pictures\\maze11.jpg";
-    open_file_prompt();
-    std::string image_path = samples::findFile(file);
-    Mat img = imread(image_path, IMREAD_COLOR);
+    ////////////////////////////////////////////////
+    //pull img, copy, and resize copy
+    Mat img = imread(filePath, IMREAD_COLOR);
     Point imgSize = Point(img.size().width, img.size().height);
-    resize(img, img, Size(550, 550 * img.size().height / img.size().width), 0, 0, INTER_LINEAR);
+    resize(img, img, Size(650, 650 * img.size().height / img.size().width), 0, 0, INTER_LINEAR);
     Point resizedSize = Point(img.size().width, img.size().height);
     Mat imgText = img.clone();
     string text = "Crop Maze OR Press Enter";
@@ -289,7 +270,8 @@ void importMaze() {
     cv::destroyWindow("ROI Selection");
     cv::cvtColor(ROI, gray, cv::COLOR_BGR2GRAY);
     cv::GaussianBlur(gray, blur, Size(5, 5), 1);
-
+    ////////////////////////////////////////////////
+    //row color frequency
     vector<float> rowSpectrum;
     cv::Scalar tempVal;
     //cout << "height" << endl;
@@ -298,7 +280,8 @@ void importMaze() {
         //cout << tempVal.val[0] << endl;
         rowSpectrum.push_back(float(tempVal.val[0]));
     }
-
+    ////////////////////////////////////////////////
+    //dirty row data
     Mat out = Mat(rowSpectrum).reshape(1);
     Scalar mean = cv::mean(rowSpectrum);
     Point tempPoint;
@@ -324,26 +307,30 @@ void importMaze() {
         }
         last = rowSpectrum[j];
     }
-    for (int i = 0; i < allPassingRows.size(); i++) {
-        //cout <<"row "<<i<<": "<< allPassingRows[i] << endl;
-        cv::line(ROI, Point(0, int((allPassingRows[i].x + allPassingRows[i].y)/2)), Point(ROI.size().width, int((allPassingRows[i].x + allPassingRows[i].y) / 2)), Scalar(100, 255, 0),1);
-    }
+    ////////////////////////////////////////////////
+    // show dirty row data
+    //for (int i = 0; i < allPassingRows.size(); i++) {
+    //    //cout <<"row "<<i<<": "<< allPassingRows[i] << endl;
+    //    cv::line(ROI, Point(0, int((allPassingRows[i].x + allPassingRows[i].y)/2)), Point(ROI.size().width, int((allPassingRows[i].x + allPassingRows[i].y) / 2)), Scalar(100, 255, 0),1);
+    //}
+    ////////////////////////////////////////////////
+    //width color frequency
     vector<Point> allPassingCols;
     vector<float> colSpectrum;
-    cout << "width" << endl;
-
     for (int i = 0; i < ROI.size().width; i++) {
         tempVal = cv::mean(blur.col(i));
         //cout << tempVal.val[0] << endl;
 
         colSpectrum.push_back(float(tempVal.val[0]));
     }
+
+    ////////////////////////////////////////////////
+    // dirty width data
     tempPoint = Point(0,0);
-    
     mean = cv::mean(colSpectrum);
     for (int j = 0; j < ROI.size().width; j++) {
-        if (colSpectrum[j] < mean.val[0]) {
-            if (last > mean.val[0]) {
+        if (colSpectrum[j] < mean.val[0]-50) {
+            if (last > mean.val[0] - 50) {
                 tempPoint.x = j;
             }
             if (j == ROI.size().width - 1) {
@@ -352,7 +339,7 @@ void importMaze() {
             }
         }
         else {
-            if (last < mean.val[0]) {
+            if (last < mean.val[0] - 50) {
                 tempPoint.y = j;
                 allPassingCols.push_back(tempPoint);
                 tempPoint = Point(0, 0);
@@ -360,18 +347,24 @@ void importMaze() {
         }
         last = colSpectrum[j];
     }
+    ////////////////////////////////////////////////
+    //narrowing columns to a pixel
     vector<int> colLines;
-    int sums = 0;
     cout << endl;
     for (int i = 0; i < allPassingCols.size(); i++) {
         colLines.push_back((allPassingCols[i].x + allPassingCols[i].y) / 2);
         //cout << colLines[i] << endl;
     }
+    ////////////////////////////////////////////////
+    // getting line spacing between columns
     vector<int> lineSpacing;
+    int smallestSpace= colLines[1]- colLines[0];
     for (int i = 1; i < allPassingCols.size(); i++) {
         lineSpacing.push_back(colLines[i] - colLines[i - 1]);
+        smallestSpace = min(smallestSpace, colLines[i] - colLines[i - 1]);
     }
-
+    ////////////////////////////////////////////////
+    // getting standard deviation for spacing
     vector<double> diff(lineSpacing.size());
     double sum = accumulate(lineSpacing.begin(), lineSpacing.end(), 0.0);
 
@@ -380,30 +373,67 @@ void importMaze() {
     double sq_sum = std::inner_product(diff.begin(), diff.end(), diff.begin(), 0.0);
     double stdev = std::sqrt(sq_sum / lineSpacing.size());
     cout << stdev << endl;
+    ////////////////////////////////////////////////
+    // show dirty row data
+    //for (int i = 0; i < colLines.size(); i++) {
+    //    cv::line(ROI, Point(colLines[i], 0), Point(colLines[i], ROI.size().height), Scalar(0,100, 255), 2);
+    //}
+    ////////////////////////////////////////////////
+    // cleans the column data, adds missing columns 
+    double maxFit;
     vector<int> newColLines;
 
-    for (int i = 0; i < colLines.size(); i++) {
-        cv::line(ROI, Point(colLines[i], 0), Point(colLines[i], ROI.size().height), Scalar(0, 0, 250), 2);
-    }
     for (int i = 0; i < lineSpacing.size(); i++)
     {
         newColLines.push_back(colLines[i]);
 
-        if (abs(lineSpacing[i]-means)>stdev*1) {
-            newColLines.push_back(colLines[i]+means);
-            if (int(means) % abs(lineSpacing[i + 1] - colLines[i]) >stdev *2.3) {
-                cout << "cry" << endl;
-                colLines[i + 1] = colLines[i] + means;
-                lineSpacing[i + 1] = colLines[i + 1] - colLines[i];
+        if (lineSpacing[i]-smallestSpace*1>stdev*1) {//  maybe swap to means
+            maxFit = lineSpacing[i] / (double)smallestSpace;
+            int maxFitint = round(maxFit);
+            cout << "maxFit " << maxFit << endl;
+
+            if (abs(maxFit-maxFitint) < .2) {
+                maxFit = maxFitint;
+            }
+            else {
+                cout << "problem" << endl;
+            }
+            for (int j = 0; j < maxFit;j++) {
+                newColLines.push_back(colLines[i] + (lineSpacing[i] / maxFit)*j);
+
             }
         }
     }
     newColLines.push_back(colLines.back());
+    ////////////////////////////////////////////////
+    // prints columns
     for (int i = 0; i < newColLines.size(); i++) {
         cv::line(ROI, Point(newColLines[i], 0), Point(newColLines[i], ROI.size().height), Scalar(100, 255, 0), 1);
     }
 
     cvui::imshow("test", img);
+}
+
+void setup() {
+    //srand((unsigned)time(NULL));
+    cvui::init(WINDOW_NAME);
+}
+int drawButtons(Mat img, Maze maze, Point canvasSize) {
+    img = cv::Scalar(0, 0, 0);
+    // More buttons will be added later, I plan on having the buttons gray out after use but that will be a problem for later.
+    if (cvui::button(img, 100, canvasSize.y - 60, "Generate Maze")) {
+        return 1;
+    }
+
+    if (cvui::button(img, 100, canvasSize.y - 30, "Open File")) {
+        return 2;
+    }
+    if (cvui::button(img, 250, canvasSize.y - 60, "Start BFS")) {
+        return 5;
+    }
+    else
+        return 0;
+
 }
 void stateMachine(Mat img, Maze &maze,int &state, int buttonInput) {
     if (buttonInput != 0)
@@ -418,7 +448,8 @@ void stateMachine(Mat img, Maze &maze,int &state, int buttonInput) {
                 break;
             break;
         case 2:
-            importMaze();
+            importMaze(getMazePath());
+
             state++;
             break;
         case 3:
