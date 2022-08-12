@@ -14,6 +14,7 @@
 #include <windows.h>
 #include <chrono>
 #include <thread>
+#include <numeric>
 
 #define CVUI_IMPLEMENTATION
 #include "cvui.h"
@@ -151,7 +152,6 @@ public:
                 }
             }
         }
-        //cout << endl;
 
         if (neighbors.size()>0) {
             return neighbors[rand() % neighbors.size()];
@@ -232,10 +232,223 @@ public:
     }
 };
 
-void open_file_prompt() {
-    //yash code here
+string getMazePath() {
+    //should open window for file selection of maze image of any format.
+    //for now it is just hard coded
+    string filePath = "C:\\Users\\cuartasca\\Pictures\\maze2.jpg";
+    return filePath;
 }
+//pullImgAndResize(){}
+Mat preClean(Mat img) {
+    Point imgSize;
+    Mat roiImg;
+    Point roiImgSize;
 
+    ////////////////////////////////////////////////
+    //pull img, resize for user ROI selection, if img is too small default it big : aka pre-cleaning 
+    
+    imgSize = Point(img.size().width, img.size().height);
+    if ((img.size().width < 300) || (img.size().height < 300)) {
+        resize(img, img, Size(650, 650 * imgSize.y / imgSize.x), 0, 0, INTER_LINEAR);
+        imgSize = Point(img.size().width, img.size().height);
+
+        roiImg = img.clone();
+        roiImgSize = imgSize;
+    }
+    else {
+        resize(img, roiImg, Size(650, 650 * imgSize.y / imgSize.x), 0, 0, INTER_LINEAR);
+        roiImgSize = Point(roiImg.size().width, roiImg.size().height);
+    }
+    string text = "Crop Maze OR Press Enter";
+    Size size = cv::getTextSize(text, cv::FONT_HERSHEY_DUPLEX, 1, 2, 0);
+    int textX = (roiImgSize.x - size.width) / 2;
+    int textY = (roiImgSize.y + size.height) / 2;
+    cv::putText(roiImg, text, Point(textX, textY), cv::FONT_HERSHEY_DUPLEX, 1, Scalar(30, 150, 0), 2);
+
+    Rect ROIrectangle = cv::selectROI("ROI Selection", roiImg, true);
+    Mat ROI;
+    if (ROIrectangle.area() != 0) {
+        ROI = img(Rect(ROIrectangle.x * imgSize.x / 650, ROIrectangle.y * imgSize.x / 650, ROIrectangle.width * imgSize.x / 650, ROIrectangle.height * imgSize.x / 650));
+    }
+    else {
+        ROI = img;
+    }
+    cv::destroyWindow("ROI Selection");
+
+    return ROI;
+}
+void clean(Mat ROI, Mat & blur) {
+    Mat gray;
+    cv::cvtColor(ROI, gray, cv::COLOR_BGR2GRAY);
+    cv::GaussianBlur(gray, blur, Size(5, 5), 1);
+}
+auto calcSpectrum = [&](int size, Mat cleanImg, cv::Mat(cv::Mat::* memFn)(int) const) {
+    vector<float> spectrum;
+    for (int i = 0; i < size; i++) {
+        auto lineMean = cv::mean((cleanImg.*memFn)(i)).val[0];
+        spectrum.push_back(lineMean);
+    }
+    return spectrum;
+};
+void groupDirtyData(Mat colSpectrum, Mat ROI) {
+    vector<Point> allPassingCols;
+    auto tempPoint = Point(0, 0);
+    auto totalMean = cv::mean(colSpectrum).val[0];
+    for (int j = 0; j < ROI.size().width; j++) {
+        if (colSpectrum[j] < totalMean - 50) {
+            if (last > totalMean - 50) {
+                tempPoint.x = j;
+            }
+            if (j == ROI.size().width - 1) {
+                tempPoint.y = j;
+                allPassingCols.push_back(tempPoint);
+            }
+        }
+        else {
+            if (last < totalMean - 50) {
+                tempPoint.y = j;
+                allPassingCols.push_back(tempPoint);
+                tempPoint = Point(0, 0);
+            }
+        }
+        last = colSpectrum[j];
+    }
+}
+void importMaze() {
+    vector<Vec2f> lines;
+    Mat cleanImg;
+
+    Mat img = imread(getMazePath(), IMREAD_COLOR);
+    Mat ROI = preClean(img);
+    clean(ROI, cleanImg);
+    auto rowSpectrum = calcSpectrum(ROI.size().height,cleanImg, &cv::Mat::row);
+
+    ////////////////////////////////////////////////
+    //group data
+    Point tempPoint;
+    vector<Point> allPassingRows;
+    int totalMean = cv::mean(rowSpectrum).val[0];
+
+    float last= 255;
+    for (int j = 0; j < ROI.size().height; j++){
+        if (rowSpectrum[j] < totalMean) {
+            if (last > totalMean) {
+                tempPoint.x = j;
+            }
+            if (j == ROI.size().height - 1) {
+                tempPoint.y = j;
+
+                allPassingRows.push_back(tempPoint);
+            }
+        }
+        else {
+            if (last < totalMean) {
+                tempPoint.y = j;
+                allPassingRows.push_back(tempPoint);
+                tempPoint = Point(0, 0);
+            }
+        }
+        last = rowSpectrum[j];
+    }
+    ////////////////////////////////////////////////
+    // show dirty row data
+    //for (int i = 0; i < allPassingRows.size(); i++) {
+    //    //cout <<"row "<<i<<": "<< allPassingRows[i] << endl;
+    //    cv::line(ROI, Point(0, int((allPassingRows[i].x + allPassingRows[i].y)/2)), Point(ROI.size().width, int((allPassingRows[i].x + allPassingRows[i].y) / 2)), Scalar(100, 255, 0),1);
+    //}
+
+    auto colSpectrum = calcSpectrum(ROI.size().width, cleanImg, &cv::Mat::col);
+
+    ////////////////////////////////////////////////
+    // dirty width data
+    vector<Point> allPassingCols;
+    tempPoint = Point(0,0);
+    totalMean = cv::mean(colSpectrum).val[0];
+    for (int j = 0; j < ROI.size().width; j++) {
+        if (colSpectrum[j] < totalMean-50) {
+            if (last > totalMean - 50) {
+                tempPoint.x = j;
+            }
+            if (j == ROI.size().width - 1) {
+                tempPoint.y = j;
+                allPassingCols.push_back(tempPoint);
+            }
+        }
+        else {
+            if (last < totalMean - 50) {
+                tempPoint.y = j;
+                allPassingCols.push_back(tempPoint);
+                tempPoint = Point(0, 0);
+            }
+        }
+        last = colSpectrum[j];
+    }
+    ////////////////////////////////////////////////
+    //narrowing columns to a pixel
+    vector<int> colLines;
+    cout << endl;
+    for (int i = 0; i < allPassingCols.size(); i++) {
+        colLines.push_back((allPassingCols[i].x + allPassingCols[i].y) / 2);
+        //cout << colLines[i] << endl;
+    }
+    ////////////////////////////////////////////////
+    // getting line spacing between columns
+    vector<int> lineSpacing;
+    int smallestSpace= colLines[1]- colLines[0];
+    for (int i = 1; i < allPassingCols.size(); i++) {
+        lineSpacing.push_back(colLines[i] - colLines[i - 1]);
+        smallestSpace = min(smallestSpace, colLines[i] - colLines[i - 1]);
+    }
+    ////////////////////////////////////////////////
+    // getting standard deviation for spacing
+    vector<double> diff(lineSpacing.size());
+    double sum = accumulate(lineSpacing.begin(), lineSpacing.end(), 0.0);
+
+    double means = sum / lineSpacing.size();
+    transform(lineSpacing.begin(), lineSpacing.end(), diff.begin(), [means](double x) { return x - means; });
+    double sq_sum = std::inner_product(diff.begin(), diff.end(), diff.begin(), 0.0);
+    double stdev = std::sqrt(sq_sum / lineSpacing.size());
+    cout << stdev << endl;
+    ////////////////////////////////////////////////
+    // show dirty row data
+    //for (int i = 0; i < colLines.size(); i++) {
+    //    cv::line(ROI, Point(colLines[i], 0), Point(colLines[i], ROI.size().height), Scalar(0,100, 255), 2);
+    //}
+    ////////////////////////////////////////////////
+    // cleans the column data, adds missing columns 
+    double maxFit;
+    vector<int> newColLines;
+
+    for (int i = 0; i < lineSpacing.size(); i++)
+    {
+        newColLines.push_back(colLines[i]);
+
+        if (lineSpacing[i]-smallestSpace*1>stdev*1) {//  maybe swap to means
+            maxFit = lineSpacing[i] / (double)smallestSpace;
+            int maxFitint = round(maxFit);
+            cout << "maxFit " << maxFit << endl;
+
+            if (abs(maxFit-maxFitint) < .2) {
+                maxFit = maxFitint;
+            }
+            else {
+                cout << "problem" << endl;
+            }
+            for (int j = 0; j < maxFit;j++) {
+                newColLines.push_back(colLines[i] + (lineSpacing[i] / maxFit)*j);
+
+            }
+        }
+    }
+    newColLines.push_back(colLines.back());
+    ////////////////////////////////////////////////
+    // prints columns
+    for (int i = 0; i < newColLines.size(); i++) {
+        cv::line(ROI, Point(newColLines[i], 0), Point(newColLines[i], ROI.size().height), Scalar(100, 255, 0), 1);
+    }
+
+    cvui::imshow("test", img);
+}
 
 void setup() {
     //srand((unsigned)time(NULL));
@@ -252,18 +465,16 @@ int drawButtons(Mat img, Maze maze, Point canvasSize) {
         return 2;
     }
     if (cvui::button(img, 250, canvasSize.y - 60, "Start BFS")) {
-        return 4;
+        return 5;
     }
     else
         return 0;
 
 }
-
 void stateMachine(Mat img, Maze &maze,int &state, int buttonInput) {
     if (buttonInput != 0)
         state = buttonInput;
-    
-
+    string test;
     switch (state)
     {
         case 0:
@@ -274,19 +485,22 @@ void stateMachine(Mat img, Maze &maze,int &state, int buttonInput) {
                 break;
             break;
         case 2:
-
+            importMaze();
+            
+            state++;
             break;
         case 3:
-            
-            break;
+
+            break;        
         case 4:
+
+            break;
+        case 5:
             maze.BFS(img, state);
             break;
     default:
         break;
     }
-
-
 }
 
 int main()
@@ -303,7 +517,6 @@ int main()
     int buttonInput = 0;
     int state = 0;
     while (true) {
-
         buttonInput = drawButtons(img, maze, canvasSize);
         stateMachine(img, maze, state, buttonInput);
         maze.drawFrame(img);
@@ -312,7 +525,6 @@ int main()
         if (cv::waitKey(1) == 27)
             break;
     }
-
 
     return 1;
 }
